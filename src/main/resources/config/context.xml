@@ -1,0 +1,46 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+	http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.2.xsd">
+
+    <!-- stored job-metadata in database -->
+    <bean id="jobRepository"
+          class="org.springframework.batch.core.repository.support.JobRepositoryFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="databaseType" value="mysql" />
+    </bean>
+
+
+    <bean id="CoreDynamicPropertiesBean" class="org.springframework.beans.factory.config.PropertiesFactoryBean" scope="singleton">
+        <property name="location" value="file:config/config.properties" />
+    </bean>
+
+    <bean id="DynamicPropertiesMap" class="java.util.HashMap" />
+
+    <bean id="DynamicPropertiesFileReader" class="com.mcx.iris.util.DynamicPropertiesFileReader">
+        <property name="dynamicPropertiesMap" ref="DynamicPropertiesMap" />
+    </bean>
+
+    <bean id="instrumentJobLauncher"
+          class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+        <property name="jobRepository" ref="jobRepository" />
+    </bean>
+
+    <bean id="bhavCopyJobLauncher"
+          class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+        <property name="jobRepository" ref="jobRepository" />
+    </bean>
+
+    <bean id="instrumentJDBCTemplate"
+        class="com.mcx.iris.template.InstrumentJDBCTemplate">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+
+    <bean id="scripMasterJDBCTemplate"
+          class="com.mcx.iris.template.ScripMasterJDBCTemplate">
+        <property name="dataSource" ref="sqlServerDataSource" />
+    </bean>
+
+</beans>

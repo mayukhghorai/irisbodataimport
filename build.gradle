@@ -1,0 +1,132 @@
+group 'com.mcx.iris'
+version '1.0'
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'application'
+apply plugin: 'distribution'
+
+sourceCompatibility = 1.8
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+    classifier "sources"
+}
+
+version = System.properties['version']
+if(version ==null|| version =='unspecified') {
+    version =new Date().getTime() + '';
+}
+
+processResources{
+    from 'config' into 'resources'
+    exclude 'config.properties'
+    exclude 'logback.xml'
+}
+
+def environment = System.properties['env']
+if (environment == null || environment == 'unspecified') {
+    environment = 'dev';
+}
+
+distributions {
+    main {
+        contents {
+            into("config") {
+                from {"src/main/config/$environment"}
+            }
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            if (project.version.endsWith('-SNAPSHOT')) {
+                url "http://nexus:8081/repository/maven-snapshots"
+            } else {
+                url "http://nexus:8081/repository/maven-releases"
+            }
+            credentials {
+                username = 'developer'
+                password = 'Mcx@123'
+            }
+        }
+    }
+
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+
+    publications {
+        mavenJava(MavenPublication) {
+            artifact sourceJar
+        }
+    }
+}
+
+repositories {
+    maven {
+        url "http://nexus:8081/repository/maven-public"
+    }
+}
+
+configurations.all {
+    // Check for updates every build
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+mainClassName = 'com.mcx.iris.RunBatchJob'
+
+applicationDefaultJvmArgs = [
+        '-Xms5g', '-Xmx5g',
+        '-XX:MetaspaceSize=128m',
+        '-XX:MaxMetaspaceSize=256m',
+        '-XX:MinHeapFreeRatio=40', '-XX:MaxHeapFreeRatio=70',
+        '-XX:+UseConcMarkSweepGC',
+        '-XX:+UseParNewGC', '-XX:+CMSParallelRemarkEnabled',
+        '-XX:ConcGCThreads=8', '-XX:ParallelGCThreads=16', '-XX:CMSInitiatingOccupancyFraction=70',
+        '-XX:+UseCMSInitiatingOccupancyOnly', '-XX:+CMSClassUnloadingEnabled',
+        '-XX:NewRatio=1', '-XX:SurvivorRatio=8', '-XX:TargetSurvivorRatio=90',
+        '-XX:MaxTenuringThreshold=15',
+        '-XX:+AggressiveOpts', '-XX:+UseFastAccessorMethods', '-XX:+UseLargePages', '-XX:+UseStringCache',
+        //'-XX:+UseCompressedStrings',
+        '-XX:+OptimizeStringConcat', '-XX:+UseBiasedLocking',
+        '-XX:+PrintGC', '-XX:+PrintGCApplicationStoppedTime',
+        '-XX:+PrintGCApplicationConcurrentTime',
+        '-XX:+PrintGCTimeStamps', '-XX:+PrintGCDateStamps', '-Xloggc:logs/gc.log', '-XX:+UseGCLogFileRotation',
+        '-XX:GCLogFileSize=1g',
+        '-XX:+PrintHeapAtGC', '-XX:+HeapDumpOnOutOfMemoryError',
+        '-XX:HeapDumpPath=logs/heap.dump',
+        '-Dlogback.configurationFile=config/logback.xml',
+        '-DLOG_PATH=logs',
+        '-DLOG_FILE_NAME=batch-job',
+        '-Dspring.config.location=config/config.properties'
+]
+
+dependencies {
+    compile('com.mcx.iris:iris-dictionary:1.0-SNAPSHOT') {
+        exclude group: 'org.hibernate'
+    }
+
+    compile 'org.springframework.boot:spring-boot-starter:1.5.7.RELEASE'
+    compile 'org.springframework:spring-jdbc:3.2.2.RELEASE'
+    compile 'org.springframework:spring-orm:4.0.3.RELEASE'
+    compile 'org.springframework.batch:spring-batch-core:2.2.0.RELEASE'
+    compile 'org.springframework.batch:spring-batch-infrastructure:2.2.0.RELEASE'
+    compile 'com.mcxindia.sqlserver:sqljdbc4:4.2'
+    compile "mysql:mysql-connector-java:5.1.31"
+    compile group: 'commons-net', name: 'commons-net', version: '3.6'
+
+
+
+
+    testCompile "junit:junit:4.12"
+
+//    runtime files('config')
+}
+
+
+publish.dependsOn(build)
